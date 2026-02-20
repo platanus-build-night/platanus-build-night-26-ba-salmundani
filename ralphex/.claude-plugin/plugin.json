@@ -1,0 +1,5 @@
+{
+  "name": "ralphex",
+  "version": "0.1.0",
+  "description": "Iterative development loop: Claude Code plans and implements, Codex reviews. Loops until clean review."
+}
