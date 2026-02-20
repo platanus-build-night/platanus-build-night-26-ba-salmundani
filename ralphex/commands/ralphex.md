@@ -18,19 +18,23 @@ Execute an iterative development loop where you (Claude Code) plan and implement
 2. If it exists, read it and parse the YAML frontmatter to extract:
    - `base_branch`: The branch to diff against (default: `main`)
    - `codex_model`: The Codex model to use (REQUIRED - if missing, ask the user)
+   - `codex_reasoning_effort`: Reasoning effort for Codex reviews (default: `high`)
 3. If the file does not exist, ask the user:
    - What base branch to diff against (suggest `main`)
-   - What Codex model to use (e.g., `o3`, `o4-mini`, `codex-mini`)
+   - What Codex model to use (gpt-5.2-codex, gpt-5.3-codex)
+   - What reasoning effort to use for reviews (suggest `high`; valid values: `low`, `medium`, `high`, `xhigh`)
    Then create `.claude/ralphex.local.md` with their answers.
 
-4. **Validate settings values**: Both `base_branch` and `codex_model` must contain only alphanumeric characters, hyphens, underscores, dots, and forward slashes (regex: `^[a-zA-Z0-9._/-]+$`). If either value contains other characters, reject it and ask the user for a valid value. This prevents shell injection.
+4. **Validate settings values**:
+   - `base_branch` and `codex_model` must contain only alphanumeric characters, hyphens, underscores, dots, and forward slashes (regex: `^[a-zA-Z0-9._/-]+$`). If either value contains other characters, reject it and ask the user for a valid value. This prevents shell injection.
+   - `codex_reasoning_effort` must be one of: `low`, `medium`, `high`, `xhigh`. If it contains any other value, reject it and ask the user for a valid value. Default to `high` when not set.
 
 5. **Resolve the review target**: Run `git rev-parse --abbrev-ref HEAD` to get the current branch. Compute a `review_target` value:
    - If the current branch is different from `base_branch`, set `review_target` = `base_branch`.
    - If the current branch equals `base_branch`, check if `origin/{base_branch}` exists by running `git rev-parse --verify origin/{base_branch}`. If it exists, set `review_target` = `origin/{base_branch}`. If it does not exist, inform the user that there is no remote to compare against and stop.
    - Verify there is actually a diff by running `git diff --stat {review_target}...HEAD`. If the diff is empty, inform the user there are no changes to review and stop.
 
-Store `review_target` and `codex_model` for use throughout the workflow. Use `review_target` (not `base_branch`) in all subsequent git and Codex commands.
+Store `review_target`, `codex_model`, and `codex_reasoning_effort` for use throughout the workflow. Use `review_target` (not `base_branch`) in all subsequent git and Codex commands.
 
 ---
 
@@ -77,12 +81,14 @@ Run Codex to review the branch changes:
 1. Run this exact command via Bash:
 
 ```
-codex exec --full-auto -m {codex_model} -o .claude/ralphex-review.txt "Review the changes of this branch against {review_target}. If you find issues, bugs, improvements, or corrections, describe each one clearly. If the code looks good and you have no corrections, respond ONLY with the exact text: LGTM"
+codex exec --sandbox read-only -m {codex_model} -c model_reasoning_effort="{codex_reasoning_effort}" -o .claude/ralphex-review.txt "Review the changes of this branch against {review_target}. If you find issues, bugs, improvements, or corrections, describe each one clearly. If the code looks good and you have no corrections, respond ONLY with the exact text: LGTM" 2>/dev/null
 ```
 
-Replace `{review_target}` and `{codex_model}` with the resolved values from Step 0.
+Replace `{review_target}`, `{codex_model}`, and `{codex_reasoning_effort}` with the resolved values from Step 0.
 
-2. Read the file `.claude/ralphex-review.txt` using the Read tool.
+2. **Check the exit code.** If the command exits with a non-zero status, inform the user that Codex failed (include the exit code) and stop. Do not attempt to read the review file.
+
+3. Read the file `.claude/ralphex-review.txt` using the Read tool.
 
 ---
 
@@ -99,11 +105,25 @@ Determine if the review is clean or has corrections:
    - It contains specific issues, bugs, suggestions, or improvements
    - It describes code changes that should be made
 
-### If corrections exist:
-- Display the Codex review to the user, prefixed with the iteration number (e.g., "**Iteration 2 - Codex Review:**")
-- Delete `.claude/ralphex-review.txt` using Bash: `rm .claude/ralphex-review.txt`
-- Go back to **Step 1: Plan** with the review feedback as context
-- In the new plan, specifically address each issue Codex raised
+### If corrections exist — critically evaluate each one:
+
+Do NOT blindly accept all suggestions. Codex can be wrong, pedantic, or suggest changes outside the task scope. For each suggestion in the review, independently evaluate and classify it:
+
+- **Accept**: Real bugs, security issues, correctness problems, or clear improvements directly related to the task. These will be addressed in the next iteration.
+- **Reject**: Factually wrong suggestions, misunderstandings of the code or requirements, or purely stylistic preferences that don't improve correctness.
+- **Defer**: Valid observations that are out of scope for the current task (e.g., pre-existing issues, unrelated refactoring suggestions).
+
+Display your verdicts to the user in this format:
+```
+**Iteration {N} - Codex Review Evaluation:**
+- ✅ Accept: {summary of accepted suggestion}
+- ❌ Reject: {summary and reason for rejection}
+- ⏭️ Defer: {summary and reason for deferral}
+```
+
+Then decide:
+- If **all suggestions are rejected or deferred** → treat this as a clean review. Inform the user and stop.
+- If **any suggestions are accepted** → delete `.claude/ralphex-review.txt` using Bash: `rm .claude/ralphex-review.txt`, then go back to **Step 1: Plan** with only the accepted corrections as context. Do not address rejected or deferred items.
 
 ### If clean (LGTM):
 - Inform the user that Codex approved the implementation

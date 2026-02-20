@@ -31,7 +31,8 @@ Create `.claude/ralphex.local.md` in your project root:
 ```markdown
 ---
 base_branch: main
-codex_model: o3
+codex_model: gpt-5.3-codex
+codex_reasoning_effort: high
 ---
 ```
 
@@ -39,6 +40,7 @@ codex_model: o3
 |---------|-------------|---------|
 | `base_branch` | Branch to diff against for reviews | `main` |
 | `codex_model` | Codex model to use for reviews | *(required)* |
+| `codex_reasoning_effort` | Reasoning effort for reviews (`low`, `medium`, `high`, `xhigh`) | `high` |
 
 The command will prompt you for these values if the settings file doesn't exist.
 
