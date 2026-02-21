@@ -27,6 +27,7 @@ Execute an iterative development loop where you (Claude Code) plan and implement
 
 4. **Validate settings values**:
    - `base_branch` and `codex_model` must contain only alphanumeric characters, hyphens, underscores, dots, and forward slashes (regex: `^[a-zA-Z0-9._/-]+$`). If either value contains other characters, reject it and ask the user for a valid value. This prevents shell injection.
+   - **Check for reasoning effort in model name**: If `codex_model` ends with `-low`, `-medium`, `-high`, or `-xhigh`, the reasoning effort was accidentally included in the model name. Strip the suffix from `codex_model`, use it as `codex_reasoning_effort` (unless already set separately), and update the settings file to fix this.
    - `codex_reasoning_effort` must be one of: `low`, `medium`, `high`, `xhigh`. If it contains any other value, reject it and ask the user for a valid value. Default to `high` when not set.
 
 5. **Resolve the review target**: Run `git rev-parse --abbrev-ref HEAD` to get the current branch. Compute a `review_target` value:
