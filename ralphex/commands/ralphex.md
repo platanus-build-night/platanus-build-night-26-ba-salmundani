@@ -23,7 +23,7 @@ Execute an iterative development loop where you (Claude Code) plan and implement
    - `codex_reasoning_effort`: Reasoning effort for Codex reviews (default: `high`)
 3. If the file does not exist, ask the user:
    - What base branch to diff against (suggest `main`)
-   - What Codex model to use (gpt-5.2-codex, gpt-5.3-codex)
+   - What Codex model to use (suggest `gpt-5.3-codex`)
    - What reasoning effort to use for reviews (suggest `high`; valid values: `low`, `medium`, `high`, `xhigh`)
    Then create `.claude/ralphex.local.md` with their answers.
 
