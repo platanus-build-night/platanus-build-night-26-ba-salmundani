@@ -14,6 +14,8 @@ Execute an iterative development loop where you (Claude Code) plan and implement
 
 ## Step 0: Read Settings
 
+**Prerequisite check**: Before doing anything else, verify that Codex CLI is installed by running `command -v codex` via Bash. If the command exits with a non-zero status (codex not found), inform the user: "Codex CLI is not installed. Install it from https://github.com/openai/codex and try again." Then stop immediately.
+
 1. Check if `.claude/ralphex.local.md` exists in the project root.
 2. If it exists, read it and parse the YAML frontmatter to extract:
    - `base_branch`: The branch to diff against (default: `main`)
