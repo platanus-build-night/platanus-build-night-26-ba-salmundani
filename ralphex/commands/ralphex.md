@@ -27,7 +27,7 @@ Execute an iterative development loop where you (Claude Code) plan and implement
 
 4. **Validate settings values**:
    - `base_branch` and `codex_model` must contain only alphanumeric characters, hyphens, underscores, dots, and forward slashes (regex: `^[a-zA-Z0-9._/-]+$`). If either value contains other characters, reject it and ask the user for a valid value. This prevents shell injection.
-   - **Check for reasoning effort in model name**: If `codex_model` ends with `-low`, `-medium`, `-high`, or `-xhigh`, the reasoning effort was accidentally included in the model name. Strip the suffix from `codex_model`, use it as `codex_reasoning_effort` (unless already set separately), and update the settings file to fix this.
+   - **Check for reasoning effort in model name**: If `codex_model` ends with `-low`, `-medium`, `-high`, or `-xhigh`, ask the user to confirm whether the suffix is an accidental reasoning effort (e.g., the user meant model `gpt-5.3-codex` with effort `high`, not model `gpt-5.3-codex-high`). If confirmed accidental, strip the suffix from `codex_model`, use it as `codex_reasoning_effort` (unless already set separately), and update the settings file. If the user says it is a legitimate model name, leave it as-is.
    - `codex_reasoning_effort` must be one of: `low`, `medium`, `high`, `xhigh`. If it contains any other value, reject it and ask the user for a valid value. Default to `high` when not set.
 
 5. **Resolve the review target**: Run `git rev-parse --abbrev-ref HEAD` to get the current branch. Compute a `review_target` value:
@@ -90,7 +90,7 @@ Present the implementation plan to the user for approval:
 On subsequent iterations (after a Codex review with accepted corrections):
 
 1. Incorporate only the accepted Codex corrections into a targeted re-plan.
-2. No codebase exploration is needed — you already understand the code from the first iteration.
+2. Avoid full re-exploration, but do focused exploration (Read, Grep, Glob) when accepted corrections reference files or code paths not inspected in the first iteration.
 3. No user approval is needed — proceed immediately to implementation.
 4. Present the re-plan briefly to the user (just show what you will fix and proceed).
 
